@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La siepe e la scatola</title>
+<style>
+:root{--bg:#050505;--fg:#e8dcc4;--gold:#c9a24b;--red:#d62828}
+*{box-sizing:border-box}
+html,body{min-height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:Georgia,"Times New Roman",serif}
+body{display:flex;overflow-x:hidden}
+#app{width:100%;max-width:760px;padding:16px;text-align:center;margin:auto}
+.panel{display:none;animation:fade 1.2s}
+.panel.on{display:block}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+h1{font-weight:normal;letter-spacing:.15em;color:var(--gold);font-size:1.3rem}
+p{line-height:1.6;font-size:1.1rem}
+input[type=text],textarea{width:100%;background:#111;border:1px solid var(--gold);color:var(--fg);padding:10px;font:inherit;font-size:1.1rem;border-radius:4px}
+button{background:transparent;color:var(--gold);border:1px solid var(--gold);padding:10px 22px;font:inherit;font-size:1.05rem;cursor:pointer;border-radius:4px;margin-top:14px}
+button:hover{background:var(--gold);color:#000}
+#table{position:relative;width:260px;height:200px;margin:18px auto}
+#tabletop{position:absolute;bottom:0;left:0;right:0;height:26px;background:#3b2a1a;border-radius:4px;box-shadow:0 0 40px #000}
+#leg1,#leg2{position:absolute;bottom:-60px;width:16px;height:60px;background:#2a1d12}
+#leg1{left:20px}#leg2{right:20px}
+#box{position:absolute;left:70px;bottom:26px;width:120px;height:78px;cursor:pointer;transition:transform .3s}
+#box .body{position:absolute;bottom:0;z-index:2;width:100%;height:52px;background:#7a5230;border:2px solid #4a2f16;border-radius:3px}
+#box .lid{z-index:4;position:absolute;bottom:50px;width:100%;height:26px;background:#8a6038;border:2px solid #4a2f16;border-radius:3px;transform-origin:left bottom;transition:transform 1.6s}
+#box .lock{position:absolute;bottom:42px;left:50px;width:20px;height:18px;background:var(--gold);border-radius:3px;z-index:2;transition:opacity 1s}
+#box.open .lid{transform:rotate(-155deg)}
+#box.open .lock{opacity:0}
+#stone{position:absolute;left:44px;bottom:50px;width:32px;height:20px;background:radial-gradient(circle at 35% 30%,#a0a0a0,#4a4a4a 75%);border-radius:50% 45% 50% 40%;opacity:0;transition:opacity 1.2s 1.2s;z-index:3}
+#box .inner{position:absolute;left:4px;right:4px;bottom:44px;height:18px;background:#1d1209;border-radius:2px;z-index:2;opacity:0;transition:opacity .8s .6s}
+#box.open .inner{opacity:1}
+#table{transition:transform 1.5s,margin 1.5s}
+#table.zoom{transform:translateX(26px) scale(1.2);margin:60px auto 80px}
+#box.open #stone{opacity:1}
+.cell{position:relative}.num{position:absolute;top:0;left:2px;font-size:9px;color:#333;pointer-events:none;z-index:2;font-family:sans-serif}
+#grid{background:#666;padding:2px}
+#glow{position:absolute;left:50%;top:10px;width:180px;height:180px;margin-left:-90px;background:radial-gradient(circle,rgba(201,162,75,.18),transparent 70%);animation:pulse 3s infinite}
+@keyframes pulse{50%{opacity:.35}}
+#timer{font-size:3rem;color:var(--gold);margin:6px 0}
+#bar{height:4px;background:#222;margin:8px auto;width:80%}
+#barfill{height:100%;width:100%;background:var(--gold)}
+.shake{animation:shake .15s 12}
+@keyframes shake{25%{transform:translateX(-6px) rotate(-2deg)}75%{transform:translateX(6px) rotate(2deg)}}
+#alarm{position:fixed;inset:0;background:var(--red);opacity:0;pointer-events:none;z-index:9;display:flex;align-items:center;justify-content:center;font-size:2rem;color:#fff;text-align:center;padding:20px}
+#alarm.on{animation:blink .35s 8}
+@keyframes blink{50%{opacity:.85}}
+#grid{display:inline-grid;gap:2px;margin:12px 0}
+.cell{width:var(--cs,28px);height:var(--cs,28px)}
+.cell input{width:100%;height:100%;text-align:center;font:inherit;font-size:calc(var(--cs,28px)*.6);text-transform:uppercase;background:#f4ecd8;color:#111;border:0;padding:0;border-radius:2px}
+.cell input:read-only{background:#cfc4a6}
+.cell.hl input{box-shadow:0 0 0 3px var(--gold);background:#ffe9a8}
+.cell.hl::after{content:"";}
+.empty{width:var(--cs,28px);height:var(--cs,28px);background:#0a0a0a}
+#bank{display:flex;flex-wrap:wrap;gap:12px 22px;justify-content:center;margin:8px 0;font-size:.95rem;text-align:left}
+#bank span{display:inline-block;margin:2px 4px 2px 0;letter-spacing:.08em}
+#bank span.done{text-decoration:line-through;color:#6a9;border-color:#6a9}
+#slots{display:flex;gap:6px;justify-content:center;margin:14px 0}
+#slots input{width:36px;height:44px;text-align:center;font:inherit;font-size:1.4rem;text-transform:uppercase;background:#111;border:1px solid var(--gold);color:var(--fg);padding:0}
+#slots .ap{align-self:center;font-size:1.6rem;color:var(--gold)}
+#narr{min-height:140px;font-style:italic;font-size:1.2rem}
+#msg{color:var(--red);min-height:1.4em}
+.small{font-size:.9rem;opacity:.7}
+</style>
+</head>
+<body>
+<div id="alarm">ALLARME!<br>La scatola non si forza!</div>
+<div id="app">
+
+<section class="panel on" id="p-ask">
+  <h1>LA STANZA BUIA</h1>
+  <div id="table"><div id="glow"></div><div id="box"><div class="body"></div><div class="inner"></div><div id="stone"></div><div class="lid"></div><div class="lock"></div></div><div id="tabletop"></div></div>
+  <p>Nella scatola troverai un regalo per te, la cosa che desideri di più al mondo, quella che se si avverasse ti renderebbe felice per sempre. Scrivila qui sotto.</p>
+  <input type="text" id="wish" maxlength="60" placeholder="Il mio desiderio…" autocomplete="off">
+  <br><button id="go">Metti il desiderio nella scatola</button>
+</section>
+
+<section class="panel" id="p-wait">
+  <h1>L’ATTESA</h1>
+  <div id="tableW"></div>
+  <div id="timer">60</div>
+  <div id="bar"><div id="barfill"></div></div>
+  <p id="waitmsg">La scatola contiene la risposta al tuo desiderio. Ma se provi a forzarla prima del tempo, si distruggerà.</p>
+  <p class="small" id="wishshow"></p>
+  <button id="toCross" style="display:none">Continua</button>
+</section>
+
+
+
+<section class="panel" id="p-cross">
+  <h1>IL CRUCIVERBA SENZA DEFINIZIONI</h1>
+  <p>Questo cruciverba non ha definizioni: scrivi nella griglia le parole dell’elenco, aiutandoti con il numero di lettere e con gli incroci. Due sono già al loro posto.</p>
+  <div id="bank"></div>
+  <div id="grid"></div>
+  <p class="small">Completa tutta la griglia per far emergere le lettere nascoste.</p>
+</section>
+
+<section class="panel" id="p-final">
+  <h1>LA PAROLA NASCOSTA</h1>
+  <p>Le lettere dorate, sparse nella griglia, compongono il titolo della poesia di Leopardi che meglio rappresenta ciò che hai vissuto in questa stanza.</p>
+  <div id="grid2"></div>
+  <div id="slots"></div>
+  <button id="check">Verifica</button>
+  <p id="msg"></p>
+</section>
+
+<section class="panel" id="p-end">
+  <h1>L’INFINITO</h1>
+  <p id="narr"></p>
+  <p id="code" style="display:none;color:var(--gold);font-size:1.3rem"></p>
+  <div id="vbox" style="display:none"><p class="small" style="display:none">Voce: <select id="voice" style="background:#111;color:var(--fg);border:1px solid var(--gold);padding:4px;font:inherit"></select></p><button id="replay">Riascolta la narrazione</button></div>
+</section>
+
+</div>
+<script>
+// ====== DA PERSONALIZZARE ======
+const SECONDA_PARTE_CODICE = "non è"; // testo mostrato dopo la narrazione
+// ===============================
+const $=id=>document.getElementById(id);
+function show(id){document.querySelectorAll(".panel").forEach(p=>p.classList.remove("on"));$(id).classList.add("on")}
+
+/* ---- Fase 1-2: desiderio, attesa, allarme ---- */
+const box=$("box");
+let wish="",left=60,tm=null,armed=false;
+const waitMsgs=["La scatola contiene la risposta al tuo desiderio. Ma se provi a forzarla prima del tempo, si distruggerà.","Senti che manca poco? Dentro c’è proprio quello che hai scritto.","Immagina come sarà: tutto ciò che hai sempre voluto, a pochi secondi da te.","Sempre più vicino. Non toccare nulla.","Fra poco la tua vita cambierà.","Ancora un istante…"];
+$("go").onclick=()=>{
+  wish=$("wish").value.trim();
+  if(!wish){$("wish").focus();return}
+  $("wishshow").textContent="Nella scatola: “"+wish+"”";
+  $("tableW").appendChild($("table"));
+  show("p-wait");armed=true;
+  tm=setInterval(tick,1000);
+};
+$("wish").addEventListener("keydown",e=>{if(e.key==="Enter")$("go").click()});
+function tick(){
+  left--;
+  $("timer").textContent=Math.max(left,0);
+  $("barfill").style.width=Math.max(left,0)/60*100+"%";
+  if(left>0&&left%10===0)$("waitmsg").textContent=waitMsgs[Math.min(5,Math.floor((60-left)/10))];
+  if(left<=0){clearInterval(tm);armed=false;openBox()}
+}
+box.onclick=()=>{
+  if(!armed)return;
+  siren();
+  $("alarm").classList.remove("on");void $("alarm").offsetWidth;$("alarm").classList.add("on");
+  box.classList.remove("shake");void box.offsetWidth;box.classList.add("shake");
+  left+=10;$("timer").textContent=left;
+  $("waitmsg").textContent="Hai provato a forzare la scatola! L’attesa si allunga di 10 secondi.";
+};
+function siren(){
+  try{
+    const ac=new (window.AudioContext||window.webkitAudioContext)();
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.type="square";o.connect(g);g.connect(ac.destination);g.gain.value=.15;
+    const t=ac.currentTime;
+    for(let i=0;i<8;i++)o.frequency.setValueAtTime(i%2?600:950,t+i*.35);
+    o.start();o.stop(t+2.8);
+  }catch(e){}
+}
+function openBox(){
+  ["timer","bar","waitmsg","wishshow"].forEach(id=>$(id).style.display="none");
+  $("table").classList.add("zoom");
+  box.classList.add("open");
+  setTimeout(()=>{$("toCross").style.display="inline-block"},3200);
+}
+$("toCross").onclick=()=>{buildCross();show("p-cross")};
+
+/* ---- Fase 3: cruciverba ---- */
+const WORDS=[
+ {"w":"NAUFRAGIO","r":7,"c":6,"d":"h","pre":1},
+ {"w":"RAGIONE","r":3,"c":14,"d":"v"},
+ {"w":"SILENZIO","r":3,"c":6,"d":"v"},
+ {"w":"LEOPARDI","r":2,"c":10,"d":"v"},
+ {"w":"MARE","r":6,"c":3,"d":"h"},
+ {"w":"INTERMINATI","r":9,"c":0,"d":"h"},
+ {"w":"STORMIR","r":8,"c":2,"d":"v"},
+ {"w":"MENTE","r":12,"c":2,"d":"h"},
+ {"w":"SOGNO","r":5,"c":12,"d":"v"},
+ {"w":"COLLE","r":2,"c":8,"d":"h"},
+ {"w":"LUNA","r":6,"c":8,"d":"v"},
+ {"w":"VIVA","r":8,"c":0,"d":"v"},
+ {"w":"IMMAGINO","r":4,"c":1,"d":"h"},
+ {"w":"FINITO","r":1,"c":1,"d":"v"},
+ {"w":"ONDE","r":11,"c":4,"d":"v"},
+ {"w":"ODO","r":0,"c":9,"d":"v"},
+ {"w":"FINGO","r":2,"c":0,"d":"h"},
+ {"w":"CARO","r":0,"c":6,"d":"h"},
+ {"w":"ERMO","r":14,"c":4,"d":"h"},
+ {"w":"ORA","r":2,"c":4,"d":"v"},
+ {"w":"IDEA","r":0,"c":12,"d":"v"},
+ {"w":"TEMPO","r":9,"c":9,"d":"v"},
+ {"w":"POETA","r":13,"c":8,"d":"h"},
+ {"w":"MORTE","r":10,"c":11,"d":"v","pre":1}
+];
+// celle dorate (lettere di L'INFINITO, sparse)
+const HL=["2,11", "13,2", "2,2", "1,1", "0,12", "12,4", "4,6", "5,1", "10,6"];
+const R=15,C=15,sol={},cells={};
+WORDS.forEach(o=>{for(let i=0;i<o.w.length;i++){const r=o.r+(o.d==="v"?i:0),c=o.c+(o.d==="h"?i:0);sol[r+","+c]=o.w[i]}});
+let dir="h";
+function buildCross(){
+  const byLen={};WORDS.forEach(o=>(byLen[o.w.length]=byLen[o.w.length]||[]).push(o.w));
+  $("bank").innerHTML=Object.keys(byLen).sort((a,b)=>a-b).map(n=>`<div><b>${n} lettere</b><br>${byLen[n].sort().map(w=>`<span data-w="${w}">${w}</span>`).join(" ")}</div>`).join("");
+  const g=$("grid");const cs=Math.max(18,Math.min(30,Math.floor((Math.min(innerWidth,760)-44)/C)));g.style.setProperty('--cs',cs+'px');g.style.gridTemplateColumns=`repeat(${C},${cs}px)`;g.innerHTML="";
+  const pre=new Set();
+  WORDS.filter(o=>o.pre).forEach(o=>{for(let i=0;i<o.w.length;i++)pre.add((o.r+(o.d==="v"?i:0))+","+(o.c+(o.d==="h"?i:0)))});
+  let n=0;
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const k=r+","+c,d=document.createElement("div");
+    if(!sol[k]){d.className="empty";g.appendChild(d);continue}
+    d.className="cell";
+    const sa=!sol[r+","+(c-1)]&&sol[r+","+(c+1)],sd=!sol[(r-1)+","+c]&&sol[(r+1)+","+c];
+    if(sa||sd){const s=document.createElement("span");s.className="num";s.textContent=++n;d.appendChild(s)}
+    const inp=document.createElement("input");inp.maxLength=1;inp.autocomplete="off";
+    if(pre.has(k)){inp.value=sol[k];inp.readOnly=true}
+    inp.onfocus=()=>{inp.select()};
+    inp.oninput=()=>{
+      inp.value=inp.value.toUpperCase().replace(/[^A-Z]/g,"");
+      if(inp.value)advance(r,c);
+      update();
+    };
+    inp.onkeydown=e=>{
+      const m={ArrowRight:[0,1,"h"],ArrowLeft:[0,-1,"h"],ArrowDown:[1,0,"v"],ArrowUp:[-1,0,"v"]}[e.key];
+      if(m){dir=m[2];const x=cells[(r+m[0])+","+(c+m[1])];if(x)x.input.focus();e.preventDefault()}
+      if(e.key==="Backspace"&&!inp.value){const x=cells[(r-(dir==="v"?1:0))+","+(c-(dir==="h"?1:0))];if(x)x.input.focus()}
+    };
+    d.appendChild(inp);g.appendChild(d);cells[k]={input:inp,el:d};
+  }
+  update();
+}
+function advance(r,c){
+  let n=cells[(r+(dir==="v"?1:0))+","+(c+(dir==="h"?1:0))];
+  if(!n){dir=dir==="h"?"v":"h";n=cells[(r+(dir==="v"?1:0))+","+(c+(dir==="h"?1:0))]}
+  if(n)n.input.focus();
+}
+function update(){
+  let all=true;
+  WORDS.forEach(o=>{
+    let ok=true;
+    for(let i=0;i<o.w.length;i++){const k=(o.r+(o.d==="v"?i:0))+","+(o.c+(o.d==="h"?i:0));if(cells[k].input.value!==o.w[i])ok=false}
+    const b=document.querySelector(`#bank span[data-w="${o.w}"]`);if(b)b.classList.toggle("done",ok);
+    if(!ok)all=false;
+  });
+  if(all)solved();
+}
+function solved(){
+  HL.forEach(k=>{cells[k].el.classList.add("hl");cells[k].input.readOnly=true});
+  $("grid2").innerHTML="";
+  $("grid2").appendChild($("grid"));
+  setTimeout(()=>{show("p-final");buildSlots()},1800);
+}
+
+/* ---- Fase 4: parola finale ---- */
+function buildSlots(){
+  const s=$("slots");if(s.children.length)return;
+  "L'INFINITO".split("").forEach((ch,i)=>{
+    if(ch==="'"){const a=document.createElement("span");a.className="ap";a.textContent="’";s.appendChild(a);return}
+    const x=document.createElement("input");x.maxLength=1;x.type="text";
+    x.oninput=()=>{x.value=x.value.toUpperCase();if(x.value){let n=x.nextElementSibling;if(n&&n.tagName!=="INPUT")n=n.nextElementSibling;if(n)n.focus()}};
+    s.appendChild(x);
+  });
+}
+$("check").onclick=()=>{
+  const v=[...$("slots").querySelectorAll("input")].map(i=>i.value).join("");
+  if(v==="LINFINITO"){startEnd()}
+  else $("msg").textContent="Non è questa. Guarda le lettere dorate e pensa a ciò che hai provato davanti alla scatola.";
+};
+
+/* ---- Fase 5: voce narrante ---- */
+const NARR=[
+"Siete delusi, vero? Eppure, fino a un minuto fa, questa scatola conteneva qualsiasi cosa voi desideraste. Conteneva un mistero infinito. Nel momento esatto in cui l’ho aperta e avete visto la realtà, l’infinito è sparito ed è rimasta una cosa da poco.",
+"Ecco cos’è la Siepe per Leopardi. La siepe è il coperchio della scatola: “da tanta parte dell’ultimo orizzonte il guardo esclude”. Finché c’è la siepe, l’animo umano può immaginare mondi immensi, e “interminati spazi”, e sovrumani silenzi, e profondissima quiete oltre di essa.",
+"Quando la scienza o la ragione abbattono la siepe e ci mostrano la realtà nuda e cruda, ci lasciano in mano solo un sasso. Ma la vera felicità non sta nel possedere l’oggetto, ma nell’infinita possibilità di immaginarlo.",
+"È nell’ostacolo e nel pensiero che “il naufragar m’è dolce in questo mare”."
+];
+let voices=[],run=0;
+function loadVoices(){
+  if(!("speechSynthesis" in window))return;
+  voices=speechSynthesis.getVoices().filter(v=>v.lang&&v.lang.toLowerCase().startsWith("it"));
+  const sel=$("voice");sel.innerHTML=voices.map((v,i)=>`<option value="${i}">${v.name}</option>`).join("");
+  if(!voices.length)return;
+  const sc=v=>(/natural|neural|online|premium|enhanced|siri/i.test(v.name)?10:0)+(/google/i.test(v.name)?5:0)+(/elsa|isabella|diego|alice|federica|luca|paola|emma/i.test(v.name)?3:0)+(v.localService?0:1);
+  let b=0;voices.forEach((v,i)=>{if(sc(v)>sc(voices[b]))b=i});sel.value=b;
+}
+if("speechSynthesis" in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+function startEnd(){
+  run++;if("speechSynthesis" in window)speechSynthesis.cancel();
+  show("p-end");$("code").style.display="none";$("vbox").style.display="none";narrate(0,run);
+}
+function narrate(i,tok){
+  if(tok!==run)return;
+  if(i>=NARR.length){
+    $("code").textContent="La seconda parte del codice di sblocco della stanza è: "+SECONDA_PARTE_CODICE;
+    $("code").style.display="block";$("vbox").style.display="block";return;
+  }
+  $("narr").textContent=NARR[i];
+  const sents=NARR[i].match(/[^.!?]+[.!?]+["”]?|[^.!?]+$/g)||[NARR[i]];
+  let k=0;
+  const nextS=()=>{
+    if(tok!==run)return;
+    if(k>=sents.length){setTimeout(()=>narrate(i+1,tok),1000);return}
+    const t=sents[k++].trim();
+    if(!("speechSynthesis" in window)){setTimeout(nextS,t.length*60);return}
+    const u=new SpeechSynthesisUtterance(t.replace(/[“”]/g,""));
+    u.lang="it-IT";const v=voices[$("voice").value];if(v){u.voice=v;u.lang=v.lang}
+    u.rate=.88;u.pitch=1;
+    u.onend=()=>setTimeout(nextS,/[,;:]$/.test(t)?250:500);
+    u.onerror=()=>setTimeout(nextS,t.length*60);
+    speechSynthesis.speak(u);
+  };
+  nextS();
+}
+$("replay").onclick=()=>startEnd();
+</script>
+</body>
+</html>
